@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Supprimer la Prescription{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger shadow-sm">
+                <div class="card-header bg-danger text-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmation de suppression</h5>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <p class="fs-5">Êtes-vous sûr de vouloir supprimer la prescription suivante ?</p>
+                    
+                    <div class="bg-light p-3 rounded text-start mb-4 border">
+                        <p class="mb-1"><strong>Médicament :</strong> {{ prescription.medication_name }}</p>
+                        <p class="mb-1"><strong>Patient :</strong> {{ patient.get_full_name|default:patient.username }}</p>
+                        <p class="mb-0"><strong>Période :</strong> Du {{ prescription.start_date|date:"d/m/Y" }} au {{ prescription.end_date|date:"d/m/Y" }}</p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="{% url 'prescriptions:patient-prescriptions' patient.id %}" class="btn btn-secondary">
+                                Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger fw-bold">
+                                <i class="bi bi-trash me-1"></i> Oui, supprimer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

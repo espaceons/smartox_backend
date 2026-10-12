@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Modifier l'Ordonnance #{{ prescription.id }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <!-- Lien Retour -->
+            <div class="mb-3">
+                <a href="{% url 'prescriptions:patient-prescriptions' patient.id %}" class="text-decoration-none text-secondary">
+                    <i class="bi bi-arrow-left"></i> Retour aux ordonnances
+                </a>
+            </div>
+
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-header bg-primary text-white p-3 rounded-top-3">
+                    <h4 class="mb-0 fs-5">
+                        <i class="bi bi-pencil-square me-2"></i>Modifier l'Ordonnance #{{ prescription.id }} - {{ patient.get_full_name|default:patient.username }}
+                    </h4>
+                </div>
+
+                <div class="card-body p-4">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {{ formset.management_form }}
+
+                        <!-- Remarques Générales -->
+                        <div class="mb-4">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label fw-bold">Instructions Générales de l'Ordonnance</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger small mt-1">{{ form.notes.errors|first }}</div>
+                            {% endif %}
+                        </div>
+
+                        <h5 class="text-primary border-bottom pb-2 mb-3">Liste des Médicaments</h5>
+
+                        <!-- Conteneur des médicaments (FormSet) -->
+                        <div id="items-container">
+                            {% for item_form in formset %}
+                                <div class="item-row border rounded p-3 mb-4 bg-light">
+                                    {{ item_form.id }}
+                                    
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="fw-bold text-secondary mb-0">
+                                            Médicament #<span class="item-index">{{ forloop.counter }}</span>
+                                        </h6>
+                                        {% if formset.can_delete %}
+                                            <div class="form-check text-danger me-2">
+                                                {{ item_form.DELETE }}
+                                                <label for="{{ item_form.DELETE.id_for_label }}" class="form-check-label fw-bold small">
+                                                    <i class="bi bi-trash me-1"></i> Supprimer ce médicament
+                                                </label>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if item_form.non_field_errors %}
+                                        <div class="alert alert-danger p-2 small">
+                                            {{ item_form.non_field_errors }}
+                                        </div>
+                                    {% endif %}
+
+                                    <!-- Nom & Dosage -->
+                                    <div class="row">
+                                        <div class="col-md-7 mb-3">
+                                            <label class="form-label fw-bold small">Nom du médicament <span class="text-danger">*</span></label>
+                                            {{ item_form.medication_name }}
+                                            {% if item_form.medication_name.errors %}
+                                                <div class="text-danger small mt-1">{{ item_form.medication_name.errors|first }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-5 mb-3">
+                                            <label class="form-label fw-bold small">Dosage / Posologie</label>
+                                            {{ item_form.dosage }}
+                                            {% if item_form.dosage.errors %}
+                                                <div class="text-danger small mt-1">{{ item_form.dosage.errors|first }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Dates & Compartiment IoT -->
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label fw-bold small">Date de début</label>
+                                            {{ item_form.start_date }}
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label fw-bold small">Date de fin</label>
+                                            {{ item_form.end_date }}
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label fw-bold small">Compartiment IoT</label>
+                                            {{ item_form.compartment_number }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Heures de Prise -->
+                                    <div class="p-3 mb-3 bg-white rounded border">
+                                        <label class="form-label fw-bold small text-secondary mb-2">
+                                            <i class="bi bi-clock me-1"></i> Heures de prise quotidiennes
+                                        </label>
+                                        <div class="row">
+                                            <div class="col-md-4 mb-2">
+                                                <label class="form-label small text-muted">Prise 1</label>
+                                                {{ item_form.intake_time_1 }}
+                                            </div>
+                                            <div class="col-md-4 mb-2">
+                                                <label class="form-label small text-muted">Prise 2</label>
+                                                {{ item_form.intake_time_2 }}
+                                            </div>
+                                            <div class="col-md-4 mb-2">
+                                                <label class="form-label small text-muted">Prise 3</label>
+                                                {{ item_form.intake_time_3 }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Consignes spécifiques -->
+                                    <div class="mb-2">
+                                        <label class="form-label fw-bold small">Consignes spécifiques au médicament</label>
+                                        {{ item_form.item_notes }}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Bouton Ajouter un Médicament -->
+                        <div class="mb-4">
+                            <button type="button" id="add-item-btn" class="btn btn-outline-primary">
+                                <i class="bi bi-plus-circle me-1"></i> Ajouter un médicament
+                            </button>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                            <a href="{% url 'prescriptions:patient-prescriptions' patient.id %}" class="btn btn-outline-secondary px-4">
+                                Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="bi bi-check-circle me-1"></i> Enregistrer les modifications
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript pour l'ajout dynamique de formulaires dans le FormSet -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('items-container');
+    const addButton = document.getElementById('add-item-btn');
+    const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+
+    function updateIndexes() {
+        const rows = container.querySelectorAll('.item-row');
+        rows.forEach((row, index) => {
+            row.querySelector('.item-index').textContent = index + 1;
+        });
+    }
+
+    addButton.addEventListener('click', function() {
+        const currentForms = container.querySelectorAll('.item-row');
+        const formCount = currentForms.length;
+
+        // Duplication du premier formulaire
+        const newForm = currentForms[0].cloneNode(true);
+
+        // Remplacement de l'index dans les attributs name/id
+        newForm.innerHTML = newForm.innerHTML.replace(/items-\d+-/g, `items-${formCount}-`);
+
+        // Réinitialisation des champs de saisie
+        newForm.querySelectorAll('input, textarea').forEach(input => {
+            if (input.type !== 'hidden' && input.type !== 'checkbox') {
+                if (input.type === 'number') {
+                    input.value = formCount + 1;
+                } else {
+                    input.value = '';
+                }
+            }
+            if (input.type === 'checkbox') {
+                input.checked = false;
+            }
+        });
+
+        container.appendChild(newForm);
+        totalForms.value = formCount + 1;
+        updateIndexes();
+    });
+});
+</script>
+{% endblock %}

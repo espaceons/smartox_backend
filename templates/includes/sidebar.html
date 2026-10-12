@@ -1,0 +1,104 @@
+<!-- Sidebar Navigation -->
+<aside class="d-flex flex-column flex-shrink-0 p-3 bg-dark text-white min-vh-100 shadow" style="width: 260px;">
+    
+    <!-- Branding / Logo -->
+    <a href="{% url 'dashboards:main-dashboard' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none px-2">
+        <i class="bi bi-capsule text-primary fs-3 me-2"></i>
+        <span class="fs-4 fw-bold tracking-tight">SmartMed</span>
+    </a>
+
+    <hr class="border-secondary my-3">
+
+    <!-- Information Utilisateur -->
+    <div class="d-flex align-items-center mb-3 px-2">
+        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold me-2" style="width: 40px; height: 40px; font-size: 1.1rem;">
+            {{ request.user.username|slice:":1"|upper }}
+        </div>
+        <div class="overflow-hidden">
+            <h6 class="mb-0 text-truncate text-white small fw-semibold">{{ request.user.get_full_name|default:request.user.username }}</h6>
+            <span class="badge bg-secondary bg-opacity-70 text-light fw-normal" style="font-size: 0.7rem;">
+                {% if request.user.is_superuser %}
+                    Super Admin
+                {% elif request.user.is_staff %}
+                    Administrateur
+                {% else %}
+                    {{ request.user.role|default:"Utilisateur" }}
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <hr class="border-secondary mb-3">
+
+    <!-- Navigation Principale -->
+    <ul class="nav nav-pills flex-column mb-auto gap-1">
+        
+        <!-- Vue Globale / Main Dashboard -->
+        <li class="nav-item">
+            <a href="{% url 'dashboards:main-dashboard' %}" 
+               class="nav-link text-white d-flex align-items-center gap-2 {% if request.resolver_match.url_name == 'main-dashboard' %}active bg-primary{% endif %}">
+                <i class="bi bi-grid-1x2-fill"></i>
+                <span>Vue Globale</span>
+            </a>
+        </li>
+
+        <!-- Menu Patient -->
+        {% if request.user.role == 'PATIENT' or request.user.is_staff or request.user.is_superuser %}
+        <li class="nav-item">
+            <a href="{% url 'dashboards:patient-dashboard' %}" 
+               class="nav-link text-white d-flex align-items-center gap-2 {% if request.resolver_match.url_name == 'patient-dashboard' %}active bg-primary{% endif %}">
+                <i class="bi bi-person-workspace"></i>
+                <span>Espace Patient</span>
+            </a>
+        </li>
+        {% endif %}
+
+        <!-- Menu Médecin -->
+        {% if request.user.role == 'DOCTOR' or request.user.is_staff or request.user.is_superuser %}
+        <li class="nav-item">
+            <a href="{% url 'dashboards:doctor-dashboard' %}" 
+               class="nav-link text-white d-flex align-items-center gap-2 {% if request.resolver_match.url_name == 'doctor-dashboard' %}active bg-primary{% endif %}">
+                <i class="bi bi-heart-pulse-fill"></i>
+                <span>Espace Médecin</span>
+            </a>
+        </li>
+        {% endif %}
+
+        <!-- Menu Proche / Relative -->
+        {% if request.user.role == 'RELATIVE' or request.user.is_staff or request.user.is_superuser %}
+        <li class="nav-item">
+            <a href="{% url 'dashboards:relative-dashboard' %}" 
+               class="nav-link text-white d-flex align-items-center gap-2 {% if request.resolver_match.url_name == 'relative-dashboard' %}active bg-primary{% endif %}">
+                <i class="bi bi-house-heart-fill"></i>
+                <span>Espace Proche</span>
+            </a>
+        </li>
+        {% endif %}
+
+        <!-- Section Mon Compte -->
+        <li class="nav-item mt-3">
+            <small class="text-uppercase text-muted fw-bold px-2" style="font-size: 0.65rem; letter-spacing: 0.5px;">Mon Compte</small>
+        </li>
+
+        <li>
+            <a href="#" class="nav-link text-secondary d-flex align-items-center gap-2">
+                <i class="bi bi-gear-fill"></i>
+                <span>Paramètres</span>
+            </a>
+        </li>
+    </ul>
+
+    <hr class="border-secondary my-3">
+
+    <!-- Bouton de Déconnexion (POST avec CSRF Token) -->
+    <div>
+        <form action="{% url 'accounts:logout' %}" method="post" class="w-100">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger w-100 d-flex align-items-center justify-content-center gap-2 border-0">
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Déconnexion</span>
+            </button>
+        </form>
+    </div>
+
+</aside>

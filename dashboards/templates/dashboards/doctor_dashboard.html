@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+
+{% block title %}Espace Médecin - SmartMed IoT{% endblock %}
+
+<style>
+    /* Permet aux menus déroulants (dropdowns) de sortir des limites du tableau */
+    .table-responsive {
+        overflow: visible !important;
+    }
+</style>
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- En-tête du Tableau de bord -->
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-8">
+            <h2 class="fw-bold"><i class="bi bi-hospital text-success me-2"></i>Espace Médecin</h2>
+            <p class="text-muted mb-0">Suivi des patients et gestion des prescriptions IoT</p>
+        </div>
+        <!-- Carte d'affichage du Code Médecin -->
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <div class="bg-primary text-white p-3 rounded-3 shadow-sm d-inline-block text-start">
+                <span class="text-white-50 small d-block">Mon Code Médecin Référent :</span>
+                <strong class="fs-4 text-warning">{{ doctor_profile.doctor_code }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Affichage des messages Flash -->
+    {% if messages %}
+        <div class="row mb-3">
+            <div class="col-12">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>{{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Demandes d'association en attente -->
+    {% if pending_requests %}
+    <div class="card border-warning mb-4 shadow-sm">
+        <div class="card-header bg-warning bg-opacity-10 fw-bold text-dark py-3">
+            <i class="bi bi-bell-fill text-warning me-2"></i>Demandes de raccordement de patients en attente ({{ pending_requests.count }})
+        </div>
+        <div class="list-group list-group-flush">
+            {% for link in pending_requests %}
+                <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                    <div>
+                        <h6 class="fw-bold mb-0">{{ link.patient.get_full_name|default:link.patient.username }}</h6>
+                        <small class="text-muted"><i class="bi bi-clock me-1"></i>Demande reçue le {{ link.created_at|date:"d/m/Y à H:i" }}</small>
+                    </div>
+                    <div>
+                        <a href="{% url 'dashboards:respond-link' link.id 'accept' %}" class="btn btn-sm btn-success me-1">
+                            <i class="bi bi-check-lg"></i> Accepter
+                        </a>
+                        <a href="{% url 'dashboards:respond-link' link.id 'reject' %}" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-x-lg"></i> Refuser
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Formulaire de rattachement direct d'un patient -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm p-3">
+                <h5 class="fw-bold mb-3"><i class="bi bi-person-plus text-success me-2"></i>Ajouter un Patient</h5>
+                <p class="text-muted small mb-3">Saisissez le nom d'utilisateur (username) du patient pour lui envoyer une invitation.</p>
+                <form action="{% url 'dashboards:request-patient-link' %}" method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        {{ link_form.patient_identifier }}
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 fw-bold">
+                        <i class="bi bi-person-check me-1"></i> Inviter le patient
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Liste des patients suivis -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-bold py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-people text-primary me-2"></i>Mes Patients Suivis</span>
+                    <span class="badge bg-primary rounded-pill">{{ patient_data|length }} patient(s)</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if patient_data %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Patient</th>
+                                        <th>Téléphone</th>
+                                        <th>Observance</th>
+                                        <th>Ordonnances</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in patient_data %}
+                                        <tr>
+                                            <!-- Colonne Patient -->
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="bg-light text-primary p-2 rounded-circle me-2 fw-bold" style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                                                        {{ item.patient_user.username|slice:":1"|upper }}
+                                                    </div>
+                                                    <div>
+                                                        <strong>{{ item.patient_user.get_full_name|default:item.patient_user.username }}</strong>
+                                                        <small class="text-muted d-block">@{{ item.patient_user.username }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <!-- Colonne Téléphone -->
+                                            <td>{{ item.patient_user.phone_number|default:"Non renseigné" }}</td>
+
+                                            <!-- Colonne Observance -->
+                                            <td>
+                                                {% if item.adherence_rate >= 80 %}
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                        <i class="bi bi-check-circle me-1"></i> {{ item.adherence_rate }}% (Bonne)
+                                                    </span>
+                                                {% elif item.adherence_rate >= 50 %}
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                                        <i class="bi bi-exclamation-triangle me-1"></i> {{ item.adherence_rate }}% (Moyenne)
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                        <i class="bi bi-x-circle me-1"></i> {{ item.adherence_rate }}% (Faible)
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+
+                                            <!-- Colonne Ordonnances -->
+                                            <td>
+                                                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalPrescriptions-{{ item.patient_user.id }}">
+                                                    <i class="bi bi-file-earmark-medical me-1"></i> {{ item.prescriptions|length }} ordonnance(s)
+                                                </button>
+
+                                                <!-- Modal dédiée au patient -->
+                                                <div class="modal fade" id="modalPrescriptions-{{ item.patient_user.id }}" tabindex="-1" aria-labelledby="modalLabel-{{ item.patient_user.id }}" aria-hidden="true">
+                                                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header bg-primary text-white">
+                                                                <h5 class="modal-title fs-6" id="modalLabel-{{ item.patient_user.id }}">
+                                                                    <i class="bi bi-file-earmark-medical me-2"></i>Ordonnances de {{ item.patient_user.get_full_name|default:item.patient_user.username }}
+                                                                </h5>
+                                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                                                            </div>
+                                                            <div class="modal-body text-start">
+                                                                {% if item.prescriptions %}
+                                                                    <div class="list-group">
+                                                                        {% for ordonnance in item.prescriptions %}
+                                                                            <div class="list-group-item p-3 mb-3 border rounded shadow-sm">
+                                                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                                                    <h6 class="fw-bold text-primary mb-0">Ordonnance #{{ ordonnance.id }}</h6>
+                                                                                    <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>{{ ordonnance.created_at|date:"d/m/Y à H:i" }}</small>
+                                                                                </div>
+                                                                                
+                                                                                {% if ordonnance.notes %}
+                                                                                    <p class="small text-muted mb-3"><em>Notes : {{ ordonnance.notes }}</em></p>
+                                                                                {% endif %}
+
+                                                                                <!-- AFFICHAGE DES COMPARTIMENTS IoT REGROUPÉS PAR HEURE -->
+                                                                                <div class="mb-3">
+                                                                                    <strong class="d-block small mb-2 text-dark"><i class="bi bi-cpu me-1 text-primary"></i>Organisation des Compartiments IoT du Pilulier :</strong>
+                                                                                    
+                                                                                    <div class="row g-2">
+                                                                                        {% for comp in ordonnance.get_compartments_by_time %}
+                                                                                            <div class="col-md-6 mb-2">
+                                                                                                <div class="border rounded p-2 bg-light">
+                                                                                                    <div class="d-flex justify-content-between align-items-center border-bottom pb-1 mb-2">
+                                                                                                        <span class="badge bg-primary fw-bold">Compartiment IoT {{ comp.compartment_number }}</span>
+                                                                                                        <span class="badge bg-dark"><i class="bi bi-clock me-1"></i>{{ comp.time }}</span>
+                                                                                                    </div>
+                                                                                                    <ul class="list-unstyled mb-0 small">
+                                                                                                        {% for med in comp.medications %}
+                                                                                                            <li class="py-1 border-bottom border-light d-flex justify-content-between">
+                                                                                                                <span><i class="bi bi-capsule text-primary me-1"></i><strong>{{ med.medication_name }}</strong></span>
+                                                                                                                <span class="text-muted">({{ med.dosage|default:"1 dose" }})</span>
+                                                                                                            </li>
+                                                                                                        {% endfor %}
+                                                                                                    </ul>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        {% empty %}
+                                                                                            <p class="text-muted small">Aucun médicament ni horaire configuré dans cette ordonnance.</p>
+                                                                                        {% endfor %}
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <div class="text-end border-top pt-2 mt-2">
+                                                                                    <a href="{% url 'prescriptions:update-prescription' ordonnance.id %}" class="btn btn-sm btn-outline-primary">
+                                                                                        <i class="bi bi-pencil me-1"></i> Modifier cette ordonnance
+                                                                                    </a>
+                                                                                </div>
+                                                                            </div>
+                                                                        {% endfor %}
+                                                                    </div>
+                                                                {% else %}
+                                                                    <p class="text-muted text-center py-3">Aucune ordonnance n'a encore été créée pour ce patient.</p>
+                                                                {% endif %}
+                                                            </div>
+                                                            <div class="modal-footer justify-content-between">
+                                                                <a href="{% url 'prescriptions:create-prescription' item.patient_user.id %}" class="btn btn-success btn-sm">
+                                                                    <i class="bi bi-plus-circle me-1"></i> Créer une ordonnance
+                                                                </a>
+                                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fermer</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            <!-- Colonne Actions -->
+                                            <td class="text-end">
+                                                <div class="btn-group" role="group">
+                                                    <!-- Bouton Nouvelle Prescription -->
+                                                    <a href="{% url 'prescriptions:create-prescription' item.patient_user.id %}" class="btn btn-sm btn-outline-primary" title="Créer une nouvelle prescription">
+                                                        <i class="bi bi-plus-circle me-1"></i> Prescription
+                                                    </a>
+                                                    
+                                                    <!-- Bouton Retirer le patient -->
+                                                    <form action="{% url 'dashboards:remove-patient-link' item.link.id %}" method="post" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir retirer {{ item.patient_user.get_full_name|default:item.patient_user.username }} de vos patients suivis ?');">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger ms-1" title="Retirer ce patient">
+                                                            <i class="bi bi-person-x"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="p-4 text-center text-muted">
+                            <i class="bi bi-people display-6 d-block mb-2 text-black-50"></i>
+                            Aucun patient actif sous votre suivi pour le moment.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

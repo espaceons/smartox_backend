@@ -1,0 +1,377 @@
+{% extends 'base.html' %}
+
+{% block title %}Espace Proche - SmartMed IoT{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- En-tête du Tableau de bord -->
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-7">
+            <h2 class="fw-bold"><i class="bi bi-heart-pulse-fill text-danger me-2"></i>Espace Proche / Aidant</h2>
+            <p class="text-muted mb-0">Bienvenue, {{ request.user.get_full_name|default:request.user.username }} ! Suivez le traitement de votre proche en temps réel.</p>
+        </div>
+        <div class="col-md-5 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-2">
+            <!-- Sélecteur de patient si plusieurs patients sont associés -->
+            {% if patients|length > 1 %}
+                <form method="get" action="{% url 'dashboards:relative-dashboard' %}" class="d-inline-block">
+                    <select name="patient_id" class="form-select form-select-sm border-danger text-danger fw-bold" onchange="this.form.submit()">
+                        {% for p in patients %}
+                            <option value="{{ p.user.id }}" {% if current_patient and current_patient.user.id == p.user.id %}selected{% endif %}>
+                                {{ p.user.get_full_name|default:p.user.username }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            {% endif %}
+            <span class="badge bg-light text-dark border p-2 fs-6 shadow-sm">
+                <i class="bi bi-calendar3 me-1 text-danger"></i> {{ today|date:"d F Y" }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Affichage des messages Flash -->
+    {% if messages %}
+        <div class="row mb-3">
+            <div class="col-12">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                        <i class="bi bi-info-circle me-2"></i>{{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if current_patient %}
+    <div class="row g-4">
+        <!-- ========================================== -->
+        <!-- COLONNE GAUCHE : Patient suivi & Formulaire d'association -->
+        <!-- ========================================== -->
+        <div class="col-lg-4">
+            
+            <!-- Carte 1 : Profil du Patient Actuel -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-danger text-white fw-bold py-3 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-person-heart me-2"></i>Patient Suivi</span>
+                    
+                    <!-- Bouton pour dissocier le patient actuellement sélectionné -->
+                    {% if current_patient_link %}
+                        <form action="{% url 'dashboards:remove-caregiver-link' current_patient_link.id %}" method="post" onsubmit="return confirm('Voulez-vous vraiment dissocier le patient {{ current_patient.user.get_full_name|default:current_patient.user.username }} ?');" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-light text-danger fw-bold py-0 px-2 shadow-sm" title="Dissocier ce patient">
+                                <i class="bi bi-person-x-fill me-1"></i>Dissocier
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle me-3">
+                            <i class="bi bi-person-circle fs-2"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">{{ current_patient.user.get_full_name|default:current_patient.user.username }}</h5>
+                            <small class="text-muted">@{{ current_patient.user.username }}</small>
+                        </div>
+                    </div>
+
+                    {% if patient_doctor %}
+                        <div class="p-3 bg-light rounded-3 mb-3 border">
+                            <small class="text-muted d-block mb-1">Médecin traitant :</small>
+                            <strong class="text-dark d-block"><i class="bi bi-hospital me-1 text-danger"></i>Dr. {{ patient_doctor.get_full_name|default:patient_doctor.username }}</strong>
+                            {% if patient_doctor.phone_number %}
+                                <small class="text-muted"><i class="bi bi-telephone me-1"></i>{{ patient_doctor.phone_number }}</small>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="p-2 bg-light text-center rounded text-muted small mb-3">
+                            Aucun médecin traitant rattaché.
+                        </div>
+                    {% endif %}
+
+                    <!-- Taux d'observance globale -->
+                    <div class="border-top pt-3 mt-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small fw-bold text-secondary">Taux d'observance :</span>
+                            <span class="fw-bold text-danger">{{ adherence_rate }}%</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ adherence_rate }}%;" aria-valuenow="{{ adherence_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Carte 2 : Formulaire pour Associer un Autre Patient -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-2 text-danger"><i class="bi bi-person-plus-fill me-2"></i>Associer un Patient</h5>
+                    <p class="text-muted small mb-3">
+                        Saisissez l'identifiant (Nom d'utilisateur ou Email) du patient dont vous voulez suivre le traitement.
+                    </p>
+                    
+                    <form action="{% url 'dashboards:request-patient-relative-link' %}" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <input type="text" name="patient_identifier" class="form-control" placeholder="Ex: samir ou samir@email.com" required>
+                        </div>
+                        <button type="submit" class="btn btn-danger w-100 fw-bold">
+                            <i class="bi bi-link-45deg me-1"></i> Associer le patient
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Carte 3 : Liste de tous vos patients rattachés avec option de suppression -->
+            {% if caregiver_links %}
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-light fw-bold py-3">
+                    <i class="bi bi-people me-2"></i>Mes Patients Associés ({{ caregiver_links|length }})
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for link in caregiver_links %}
+                        <div class="list-group-item p-3 d-flex justify-content-between align-items-center {% if current_patient and current_patient.user.id == link.patient.id %}bg-danger-subtle border-start border-danger border-3{% endif %}">
+                            <a href="?patient_id={{ link.patient.id }}" class="text-decoration-none text-dark flex-grow-1">
+                                <strong class="d-block">{{ link.patient.get_full_name|default:link.patient.username }}</strong>
+                                <small class="text-muted">{{ link.patient.email }}</small>
+                            </a>
+                            
+                            <!-- Formulaire de dissociation directe -->
+                            <form action="{% url 'dashboards:remove-caregiver-link' link.id %}" method="post" onsubmit="return confirm('Dissocier {{ link.patient.get_full_name|default:link.patient.username }} ?');" class="ms-2">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" title="Dissocier ce patient">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+
+        <!-- ========================================== -->
+        <!-- COLONNE DROITE : Suivi des Prises & Ordonnances -->
+        <!-- ========================================== -->
+        <div class="col-lg-8">
+
+            <!-- Statut de la SmartBox du Patient -->
+            <div class="card border-0 shadow-sm mb-4 bg-danger bg-gradient text-white">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <span class="badge bg-white text-danger mb-2 fw-bold">
+                                <i class="bi bi-cpu me-1"></i> Suivi SmartBox IoT
+                            </span>
+                            <h4 class="fw-bold mb-1">Pilulier de {{ current_patient.user.first_name|default:current_patient.user.username }}</h4>
+                            <p class="text-white-50 mb-0 small">
+                                Visualisez l'état du pilulier connecté et la prise des médicaments en direct.
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                            <div class="d-inline-block text-center bg-white bg-opacity-20 p-3 rounded-3 me-2">
+                                <i class="bi bi-battery-charging fs-4 d-block"></i>
+                                <small class="fw-bold">{{ battery_level|default:90 }}%</small>
+                            </div>
+                            <div class="d-inline-block text-center bg-white bg-opacity-20 p-3 rounded-3">
+                                <i class="bi bi-wifi fs-4 d-block"></i>
+                                <small class="fw-bold">{{ box_status|default:"ONLINE" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cartes résumé des prises du jour -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm p-3 border-start border-4 border-success">
+                        <span class="text-muted small">Prises effectuées</span>
+                        <h3 class="fw-bold mb-0 text-success">{{ taken_doses_count|default:0 }} / {{ total_doses_count|default:0 }}</h3>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm p-3 border-start border-4 border-danger">
+                        <span class="text-muted small">Doses manquées</span>
+                        <h3 class="fw-bold mb-0 text-danger">{{ missed_doses_count|default:0 }}</h3>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm p-3 border-start border-4 border-info">
+                        <span class="text-muted small">Prochaine prise</span>
+                        <h6 class="fw-bold mb-0 text-dark mt-1">
+                            {% if next_log %}
+                                {{ next_log.scheduled_datetime|date:"H:i" }}
+                            {% else %}
+                                Terminé
+                            {% endif %}
+                        </h6>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tableau des prises de la journée -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-capsule text-danger me-2"></i>Programme des Prises d'Aujourd'hui</span>
+                    <span class="badge bg-light text-dark border">{{ today_logs|length }} prise(s)</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if today_logs %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Heure</th>
+                                        <th>Médicament</th>
+                                        <th>Dosage</th>
+                                        <th>Compartiment</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in today_logs %}
+                                        <tr>
+                                            <td>
+                                                <strong class="text-danger"><i class="bi bi-clock me-1"></i>{{ log.scheduled_datetime|date:"H:i" }}</strong>
+                                            </td>
+                                            <td>
+                                                <strong>{{ log.item.medication_name|default:log.prescription_item.medication_name }}</strong>
+                                            </td>
+                                            <td>{{ log.item.dosage|default:log.prescription_item.dosage|default:"-" }}</td>
+                                            <td>
+                                                <span class="badge bg-secondary">
+                                                    Compartiment {{ log.item.compartment_number|default:log.prescription_item.compartment_number|default:"1" }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if log.status == 'TAKEN' %}
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                        <i class="bi bi-check-lg me-1"></i> Pris à {{ log.taken_datetime|date:"H:i" }}
+                                                    </span>
+                                                {% elif log.status == 'MISSED' %}
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                        <i class="bi bi-x-lg me-1"></i> Manqué
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                                        <i class="bi bi-hourglass-split me-1"></i> En attente
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="p-4 text-center text-muted">
+                            <i class="bi bi-capsule-fill display-6 d-block mb-2 text-black-50"></i>
+                            Aucune prise enregistrée pour aujourd'hui.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Ordonnances du patient -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold py-3 border-bottom">
+                    <i class="bi bi-file-earmark-medical text-danger me-2"></i>Ordonnances de {{ current_patient.user.first_name|default:current_patient.user.username }}
+                </div>
+                <div class="card-body p-3">
+                    {% if prescriptions %}
+                        <div class="accordion accordion-flush" id="accordionPrescriptions">
+                            {% for ordonnance in prescriptions %}
+                                <div class="accordion-item border rounded mb-2">
+                                    <h2 class="accordion-header" id="heading-{{ ordonnance.id }}">
+                                        <button class="accordion-button collapsed py-2 px-3 bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ ordonnance.id }}">
+                                            <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                                                <span><strong>Ordonnance #{{ ordonnance.id }}</strong> - Dr. {{ ordonnance.doctor.get_full_name|default:ordonnance.doctor.username }}</span>
+                                                <span class="text-muted small">{{ ordonnance.created_at|date:"d/m/Y" }}</span>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    <div id="collapse-{{ ordonnance.id }}" class="accordion-collapse collapse" data-bs-parent="#accordionPrescriptions">
+                                        <div class="accordion-body p-3">
+                                            {% if ordonnance.notes %}
+                                                <p class="small text-muted mb-2"><strong>Notes du médecin :</strong> {{ ordonnance.notes }}</p>
+                                            {% endif %}
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-borderless align-middle mb-0">
+                                                    <thead>
+                                                        <tr class="text-muted border-bottom small">
+                                                            <th>Médicament</th>
+                                                            <th>Dosage</th>
+                                                            <th>Heures</th>
+                                                            <th>Compartiment</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {% for med in ordonnance.items.all %}
+                                                            <tr>
+                                                                <td class="fw-bold">{{ med.medication_name }}</td>
+                                                                <td>{{ med.dosage|default:"-" }}</td>
+                                                                <td>
+                                                                    {% if med.intake_time_1 %}<span class="badge bg-light text-dark border">{{ med.intake_time_1 }}</span>{% endif %}
+                                                                    {% if med.intake_time_2 %}<span class="badge bg-light text-dark border">{{ med.intake_time_2 }}</span>{% endif %}
+                                                                    {% if med.intake_time_3 %}<span class="badge bg-light text-dark border">{{ med.intake_time_3 }}</span>{% endif %}
+                                                                </td>
+                                                                <td><span class="badge bg-dark">N° {{ med.compartment_number }}</span></td>
+                                                            </tr>
+                                                        {% empty %}
+                                                            <tr><td colspan="4" class="text-muted small">Aucun médicament rattaché.</td></tr>
+                                                        {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="p-4 text-center text-muted">
+                            Aucune ordonnance enregistrée.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Cas où le proche n'a encore AUCUN patient rattaché -->
+    <div class="row justify-content-center my-5">
+        <div class="col-md-6 text-center">
+            <div class="card border-0 shadow-sm p-4">
+                <div class="card-body">
+                    <div class="bg-danger bg-opacity-10 text-danger p-3 rounded-circle d-inline-block mb-3">
+                        <i class="bi bi-person-heart display-4"></i>
+                    </div>
+                    <h4 class="fw-bold">Aucun patient associé</h4>
+                    <p class="text-muted small mb-4">
+                        Vous n'avez pas encore de patient rattaché à votre compte proche aidant.
+                    </p>
+                    
+                    <form action="{% url 'dashboards:request-patient-relative-link' %}" method="post" class="text-start">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Nom d'utilisateur ou Email du patient :</label>
+                            <input type="text" name="patient_identifier" class="form-control" placeholder="Ex: samir ou samir@email.com" required>
+                        </div>
+                        <button type="submit" class="btn btn-danger w-100 fw-bold">
+                            <i class="bi bi-link-45deg me-1"></i> Demander le rattachement
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Ordonnances de {{ patient.get_full_name|default:patient.username }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- En-tête / Navigation -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{% url 'dashboards:doctor-dashboard' %}" class="text-decoration-none text-secondary small">
+                <i class="bi bi-arrow-left"></i> Tableau de bord
+            </a>
+            <h3 class="mb-0 mt-1">
+                <i class="bi bi-file-earmark-medical me-2 text-primary"></i>
+                Ordonnances de {{ patient.get_full_name|default:patient.username }}
+            </h3>
+        </div>
+        {% if request.user.is_doctor or request.user.role == 'DOCTOR' %}
+            <a href="{% url 'prescriptions:create-prescription' patient.id %}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i> Nouvelle Ordonnance
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- Messages de confirmation / erreur -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Liste des ordonnances -->
+    {% if prescriptions %}
+        <div class="row">
+            {% for ordonnance in prescriptions %}
+                <div class="col-12 mb-4">
+                    <div class="card shadow-sm border-0 rounded-3">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center py-3">
+                            <div>
+                                <strong class="text-primary fs-5">Ordonnance #{{ ordonnance.id }}</strong>
+                                <span class="text-muted ms-2 fs-6">
+                                    <i class="bi bi-calendar3 me-1"></i>{{ ordonnance.created_at|date:"d/m/Y à H:i" }}
+                                </span>
+                            </div>
+                            {% if request.user.is_doctor or request.user.role == 'DOCTOR' %}
+                                <div class="btn-group">
+                                    <a href="{% url 'prescriptions:update-prescription' ordonnance.id %}" class="btn btn-outline-primary btn-sm px-3">
+                                        <i class="bi bi-pencil me-1"></i> Modifier
+                                    </a>
+                                    <a href="{% url 'prescriptions:delete-prescription' ordonnance.id %}" class="btn btn-outline-danger btn-sm px-3">
+                                        <i class="bi bi-trash me-1"></i> Supprimer
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="card-body p-4">
+                            {% if ordonnance.notes %}
+                                <div class="alert alert-secondary py-2 mb-3">
+                                    <strong><i class="bi bi-info-circle me-1"></i> Remarques du médecin :</strong> {{ ordonnance.notes }}
+                                </div>
+                            {% endif %}
+
+                            <h6 class="fw-bold mb-3 text-secondary">Médicaments prescrits :</h6>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Médicament</th>
+                                            <th>Dosage / Posologie</th>
+                                            <th>Dates de traitement</th>
+                                            <th>Heures de prise</th>
+                                            <th>Compartiment IoT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in ordonnance.items.all %}
+                                            <tr>
+                                                <td class="fw-bold text-dark">
+                                                    <i class="bi bi-capsule me-1 text-primary"></i>{{ item.medication_name }}
+                                                </td>
+                                                <td>{{ item.dosage|default:"Non spécifié" }}</td>
+                                                <td>
+                                                    {% if item.start_date and item.end_date %}
+                                                        {{ item.start_date|date:"d/m/Y" }} → {{ item.end_date|date:"d/m/Y" }}
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if item.intake_time_1 %}
+                                                        <span class="badge bg-primary me-1"><i class="bi bi-clock me-1"></i>{{ item.intake_time_1 }}</span>
+                                                    {% endif %}
+                                                    {% if item.intake_time_2 %}
+                                                        <span class="badge bg-info text-dark me-1"><i class="bi bi-clock me-1"></i>{{ item.intake_time_2 }}</span>
+                                                    {% endif %}
+                                                    {% if item.intake_time_3 %}
+                                                        <span class="badge bg-secondary me-1"><i class="bi bi-clock me-1"></i>{{ item.intake_time_3 }}</span>
+                                                    {% endif %}
+                                                    {% if not item.intake_time_1 and not item.intake_time_2 and not item.intake_time_3 %}
+                                                        <span class="text-muted small">Aucune heure définie</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-dark">Compartiment {{ item.compartment_number }}</span>
+                                                </td>
+                                            </tr>
+                                            {% if item.item_notes %}
+                                                <tr class="table-borderless">
+                                                    <td colspan="5" class="pt-0 text-muted small ps-4">
+                                                        <em>Note : {{ item.item_notes }}</em>
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                        {% empty %}
+                                            <tr>
+                                                <td colspan="5" class="text-muted text-center py-3">
+                                                    Aucun médicament associé à cette ordonnance.
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card shadow-sm border-0 p-5 text-center">
+            <div class="text-muted mb-3">
+                <i class="bi bi-journal-x fs-1"></i>
+            </div>
+            <h5>Aucune ordonnance trouvée</h5>
+            <p class="text-muted">Aucune ordonnance n'a encore été créée pour ce patient.</p>
+            {% if request.user.is_doctor or request.user.role == 'DOCTOR' %}
+                <div class="mt-2">
+                    <a href="{% url 'prescriptions:create-prescription' patient.id %}" class="btn btn-primary px-4">
+                        Créer une première ordonnance
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center" href="{% url 'home' %}">
+            <i class="bi bi-capsule fs-3 me-2"></i> SmartMed IoT
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+                <li class="nav-item">
+                    <a class="nav-link text-white fw-semibold me-2" href="{% url 'home' %}#features">Fonctionnalités</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white fw-semibold me-2" href="{% url 'home' %}#how-it-works">Comment ça marche ?</a>
+                </li>
+                
+                {% if user.is_authenticated %}
+                    <!-- Bouton de Dashboard dynamique selon le rôle -->
+                    <li class="nav-item">
+                        {% if user.role == 'DOCTOR' %}
+                            <a class="btn btn-light text-primary fw-bold" href="{% url 'dashboards:doctor-dashboard' %}">
+                                <i class="bi bi-speedometer2 me-1"></i> Dashboard Médecin
+                            </a>
+                        {% elif user.role == 'RELATIVE' %}
+                            <a class="btn btn-light text-primary fw-bold" href="{% url 'dashboards:relative-dashboard' %}">
+                                <i class="bi bi-speedometer2 me-1"></i> Dashboard Proche
+                            </a>
+                        {% elif user.role == 'PATIENT' %}
+                            <a class="btn btn-light text-primary fw-bold" href="{% url 'dashboards:patient-dashboard' %}">
+                                <i class="bi bi-speedometer2 me-1"></i> Mon Suivi
+                            </a>
+                        {% else %}
+                            <a class="btn btn-light text-primary fw-bold" href="/admin/">
+                                <i class="bi bi-gear me-1"></i> Administration
+                            </a>
+                        {% endif %}
+                    </li>
+
+                    <!-- Menu Déroulant Profil & Déconnexion -->
+                    <li class="nav-item dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center gap-2" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle fs-5"></i>
+                            <span class="d-none d-md-inline">{{ user.email|default:user.username }}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2" aria-labelledby="userMenu">
+                            <li class="dropdown-header text-muted">
+                                <small>Connecté en tant que :</small><br>
+                                <strong class="text-dark">{{ user.get_role_display|default:user.role }}</strong>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="{% url 'accounts:logout' %}" method="post" class="m-0">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item text-danger d-flex align-items-center gap-2 w-100 border-0 bg-transparent">
+                                        <i class="bi bi-box-arrow-right"></i> Se déconnecter
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="btn btn-outline-light fw-bold rounded-pill px-3" href="{% url 'accounts:login' %}">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> Connexion
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-light text-primary fw-bold rounded-pill px-4 shadow-sm" href="{% url 'accounts:register' %}">
+                            <i class="bi bi-person-plus-fill me-1"></i> Inscription
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
