@@ -63,7 +63,7 @@
                                         </div>
                                     {% endif %}
 
-                                    <!-- Nom & Dosage -->
+                                    <!-- Nom & Posologie -->
                                     <div class="row">
                                         <div class="col-md-7 mb-3">
                                             <label class="form-label fw-bold small">Nom du médicament <span class="text-danger">*</span></label>
@@ -81,39 +81,60 @@
                                         </div>
                                     </div>
 
-                                    <!-- Dates & Compartiment IoT -->
+                                    <!-- Dates de traitement -->
                                     <div class="row">
-                                        <div class="col-md-4 mb-3">
+                                        <div class="col-md-6 mb-3">
                                             <label class="form-label fw-bold small">Date de début</label>
                                             {{ item_form.start_date }}
                                         </div>
-                                        <div class="col-md-4 mb-3">
+                                        <div class="col-md-6 mb-3">
                                             <label class="form-label fw-bold small">Date de fin</label>
                                             {{ item_form.end_date }}
                                         </div>
-                                        <div class="col-md-4 mb-3">
-                                            <label class="form-label fw-bold small">Compartiment IoT</label>
-                                            {{ item_form.compartment_number }}
-                                        </div>
                                     </div>
 
-                                    <!-- Heures de Prise -->
+                                    <!-- Association Heures de prise & Compartiments IoT -->
                                     <div class="p-3 mb-3 bg-white rounded border">
                                         <label class="form-label fw-bold small text-secondary mb-2">
-                                            <i class="bi bi-clock me-1"></i> Heures de prise quotidiennes
+                                            <i class="bi bi-clock me-1"></i> Heures de Prise & Association aux Compartiments IoT
                                         </label>
-                                        <div class="row">
-                                            <div class="col-md-4 mb-2">
-                                                <label class="form-label small text-muted">Prise 1</label>
+                                        
+                                        <!-- Prise 1 -->
+                                        <div class="row g-2 align-items-center mb-2">
+                                            <div class="col-md-2">
+                                                <span class="small fw-bold text-dark">Prise 1 :</span>
+                                            </div>
+                                            <div class="col-md-5">
                                                 {{ item_form.intake_time_1 }}
                                             </div>
-                                            <div class="col-md-4 mb-2">
-                                                <label class="form-label small text-muted">Prise 2</label>
+                                            <div class="col-md-5">
+                                                {{ item_form.compartment_1 }}
+                                            </div>
+                                        </div>
+
+                                        <!-- Prise 2 -->
+                                        <div class="row g-2 align-items-center mb-2">
+                                            <div class="col-md-2">
+                                                <span class="small fw-bold text-dark">Prise 2 :</span>
+                                            </div>
+                                            <div class="col-md-5">
                                                 {{ item_form.intake_time_2 }}
                                             </div>
-                                            <div class="col-md-4 mb-2">
-                                                <label class="form-label small text-muted">Prise 3</label>
+                                            <div class="col-md-5">
+                                                {{ item_form.compartment_2 }}
+                                            </div>
+                                        </div>
+
+                                        <!-- Prise 3 -->
+                                        <div class="row g-2 align-items-center">
+                                            <div class="col-md-2">
+                                                <span class="small fw-bold text-dark">Prise 3 :</span>
+                                            </div>
+                                            <div class="col-md-5">
                                                 {{ item_form.intake_time_3 }}
+                                            </div>
+                                            <div class="col-md-5">
+                                                {{ item_form.compartment_3 }}
                                             </div>
                                         </div>
                                     </div>
@@ -150,47 +171,118 @@
     </div>
 </div>
 
-<!-- JavaScript pour l'ajout dynamique de formulaires dans le FormSet -->
+<!-- Template d'un formulaire vierge pour l'ajout dynamique via JS -->
+<template id="empty-form-template">
+    <div class="item-row border rounded p-3 mb-4 bg-light">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-secondary mb-0">
+                Médicament #<span class="item-index">__prefix__</span>
+            </h6>
+            <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn">
+                <i class="bi bi-trash me-1"></i> Supprimer
+            </button>
+        </div>
+
+        <div class="row">
+            <div class="col-md-7 mb-3">
+                <label class="form-label fw-bold small">Nom du médicament <span class="text-danger">*</span></label>
+                {{ formset.empty_form.medication_name }}
+            </div>
+            <div class="col-md-5 mb-3">
+                <label class="form-label fw-bold small">Dosage / Posologie</label>
+                {{ formset.empty_form.dosage }}
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small">Date de début</label>
+                {{ formset.empty_form.start_date }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small">Date de fin</label>
+                {{ formset.empty_form.end_date }}
+            </div>
+        </div>
+
+        <div class="p-3 mb-3 bg-white rounded border">
+            <label class="form-label fw-bold small text-secondary mb-2">
+                <i class="bi bi-clock me-1"></i> Heures de Prise & Association aux Compartiments IoT
+            </label>
+            
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-md-2"><span class="small fw-bold text-dark">Prise 1 :</span></div>
+                <div class="col-md-5">{{ formset.empty_form.intake_time_1 }}</div>
+                <div class="col-md-5">{{ formset.empty_form.compartment_1 }}</div>
+            </div>
+
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-md-2"><span class="small fw-bold text-dark">Prise 2 :</span></div>
+                <div class="col-md-5">{{ formset.empty_form.intake_time_2 }}</div>
+                <div class="col-md-5">{{ formset.empty_form.compartment_2 }}</div>
+            </div>
+
+            <div class="row g-2 align-items-center">
+                <div class="col-md-2"><span class="small fw-bold text-dark">Prise 3 :</span></div>
+                <div class="col-md-5">{{ formset.empty_form.intake_time_3 }}</div>
+                <div class="col-md-5">{{ formset.empty_form.compartment_3 }}</div>
+            </div>
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label fw-bold small">Consignes spécifiques au médicament</label>
+            {{ formset.empty_form.item_notes }}
+        </div>
+
+        <div class="d-none">{{ formset.empty_form.DELETE }}</div>
+    </div>
+</template>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('items-container');
     const addButton = document.getElementById('add-item-btn');
     const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+    const template = document.getElementById('empty-form-template');
 
     function updateIndexes() {
         const rows = container.querySelectorAll('.item-row');
         rows.forEach((row, index) => {
-            row.querySelector('.item-index').textContent = index + 1;
+            const indexSpan = row.querySelector('.item-index');
+            if (indexSpan) {
+                indexSpan.textContent = index + 1;
+            }
         });
     }
 
     addButton.addEventListener('click', function() {
-        const currentForms = container.querySelectorAll('.item-row');
-        const formCount = currentForms.length;
+        const formCount = parseInt(totalForms.value, 10);
+        
+        let newFormHtml = template.innerHTML.replace(/__prefix__/g, formCount);
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = newFormHtml;
+        const newFormNode = tempDiv.firstElementChild;
 
-        // Duplication du premier formulaire
-        const newForm = currentForms[0].cloneNode(true);
-
-        // Remplacement de l'index dans les attributs name/id
-        newForm.innerHTML = newForm.innerHTML.replace(/items-\d+-/g, `items-${formCount}-`);
-
-        // Réinitialisation des champs de saisie
-        newForm.querySelectorAll('input, textarea').forEach(input => {
-            if (input.type !== 'hidden' && input.type !== 'checkbox') {
-                if (input.type === 'number') {
-                    input.value = formCount + 1;
-                } else {
-                    input.value = '';
-                }
-            }
-            if (input.type === 'checkbox') {
-                input.checked = false;
-            }
-        });
-
-        container.appendChild(newForm);
+        container.appendChild(newFormNode);
         totalForms.value = formCount + 1;
         updateIndexes();
+    });
+
+    container.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-item-btn')) {
+            const row = e.target.closest('.item-row');
+            const deleteCheckbox = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+            
+            if (deleteCheckbox) {
+                deleteCheckbox.checked = true;
+                row.style.display = 'none';
+            } else {
+                row.remove();
+                totalForms.value = container.querySelectorAll('.item-row').length;
+                updateIndexes();
+            }
+        }
     });
 });
 </script>

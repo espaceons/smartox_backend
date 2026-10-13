@@ -14,6 +14,7 @@ from dashboards.forms import (
     LinkPatientToRelativeForm, 
     LinkRelativeToPatientForm
 )
+from iot_api.models import DoseLog
 from prescriptions.models import Prescription
 from logs.models import MedicationLog
 from .forms import AddCaregiverForm
@@ -84,12 +85,10 @@ def doctor_dashboard(request):
             .order_by("-created_at")
         )
 
-        total_logs = MedicationLog.objects.filter(
-            prescription__patient=patient_user
-        ).count()
-        taken_logs = MedicationLog.objects.filter(
-            prescription__patient=patient_user, status="TAKEN"
-        ).count()
+        # --- REMPLACEMENT PAR DOSELOG (IOT) ---
+        iot_logs = DoseLog.objects.filter(patient=patient_user)
+        total_logs = iot_logs.count()
+        taken_logs = iot_logs.filter(status="TAKEN").count()
 
         adherence_rate = (
             round((taken_logs / total_logs * 100), 1) if total_logs > 0 else 100.0
@@ -102,6 +101,8 @@ def doctor_dashboard(request):
             "adherence_rate": adherence_rate,
             "total_prescriptions": prescriptions.count(),
             "prescriptions": prescriptions,
+            # Pour afficher l'historique IoT dans le template médecin
+            "dose_logs": DoseLog.objects.filter(patient=patient_user).order_by('-taken_at')[:20],
         })
 
     context = {
@@ -126,25 +127,18 @@ def patient_dashboard(request):
     patient_profile, _ = PatientProfile.objects.get_or_create(user=patient_user)
     today = timezone.now().date()
 
-    # Liens Médecins
-    doctor_links = DoctorPatientLink.objects.filter(patient=patient_user).select_related('doctor')
-
-    # Liens Proches Aidants associés à ce patient
+    doctor_links = DoctorPatientLink.objects.filter(
+        patient=patient_user).select_related('doctor')
     relatives_links = PatientCaregiver.objects.filter(patient=patient_user).select_related('caregiver')
 
-    # Logs de prise de médicaments du jour
-    today_logs = MedicationLog.objects.filter(
-        prescription__patient=patient_user,
-        scheduled_datetime__date=today
-    ).select_related('prescription').order_by('scheduled_datetime')
+    # --- REMPLACEMENT PAR DOSELOG (IOT) POUR LA JOURNÉE ---
+    today_logs = DoseLog.objects.filter(
+        patient=patient_user,
+        taken_at__date=today
+    ).order_by('-taken_at')
 
     taken_doses_count = today_logs.filter(status='TAKEN').count()
     total_doses_count = today_logs.count()
-
-    next_log = today_logs.filter(
-        status='PENDING',
-        scheduled_datetime__gte=timezone.now()
-    ).first()
 
     context = {
         'patient_profile': patient_profile,
@@ -152,10 +146,9 @@ def patient_dashboard(request):
         'relatives_links': relatives_links,
         'link_form': LinkDoctorForm(),
         'link_relative_form': LinkRelativeToPatientForm(),
-        'today_logs': today_logs,
+        'today_logs': today_logs,  # Transmis au template
         'taken_doses_count': taken_doses_count,
         'total_doses_count': total_doses_count,
-        'next_log': next_log,
         'battery_level': 88,
         'box_status': 'ONLINE',
     }
@@ -202,7 +195,6 @@ def relative_dashboard(request):
     taken_doses_count = 0
     missed_doses_count = 0
     adherence_rate = 100.0
-    next_log = None
     patient_doctor = None
     today = timezone.now().date()
 
@@ -210,42 +202,37 @@ def relative_dashboard(request):
         patient_user = current_patient.user
         patient_doctor = getattr(current_patient, 'doctor', None)
 
-        today_logs = MedicationLog.objects.filter(
-            prescription__patient=patient_user,
-            scheduled_datetime__date=today
-        ).select_related('prescription').order_by('scheduled_datetime')
+        # --- REMPLACEMENT PAR DOSELOG (IOT) ---
+        today_logs = DoseLog.objects.filter(
+            patient=patient_user,
+            taken_at__date=today
+        ).order_by('-taken_at')
 
         total_doses_count = today_logs.count()
         taken_doses_count = today_logs.filter(status='TAKEN').count()
         missed_doses_count = today_logs.filter(status='MISSED').count()
 
-        all_logs = MedicationLog.objects.filter(prescription__patient=patient_user)
+        all_logs = DoseLog.objects.filter(patient=patient_user)
         total_all = all_logs.count()
         taken_all = all_logs.filter(status='TAKEN').count()
         if total_all > 0:
             adherence_rate = round((taken_all / total_all) * 100, 1)
 
-        next_log = today_logs.filter(
-            status='PENDING',
-            scheduled_datetime__gte=timezone.now()
-        ).first()
-
         prescriptions = Prescription.objects.filter(patient=patient_user)\
-                                           .prefetch_related('items')\
-                                           .order_by('-created_at')
+            .prefetch_related('items')\
+            .order_by('-created_at')
 
     context = {
         'patients': patients,
         'current_patient': current_patient,
         'patient_doctor': patient_doctor,
-        'today_logs': today_logs,
+        'today_logs': today_logs,  # Transmis au template
         'prescriptions': prescriptions,
         'today': today,
         'total_doses_count': total_doses_count,
         'taken_doses_count': taken_doses_count,
         'missed_doses_count': missed_doses_count,
         'adherence_rate': adherence_rate,
-        'next_log': next_log,
         'battery_level': 90,
         'box_status': 'ONLINE',
     }

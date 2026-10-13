@@ -35,47 +35,45 @@ class Prescription(models.Model):
 
     def get_compartments_by_time(self):
         """
-        Regroupe les médicaments par heure de prise tout en conservant le numéro 
-        de compartiment IoT spécifié par le médecin sur le médicament.
+        Organise et regroupe tous les médicaments par Compartiment IoT et Heure de prise.
         """
-        # Clé = Heure de prise, Valeur = dict{'compartment_number': int, 'medications': list}
-        time_to_compartment = {}
+        # Clé = (numéro_compartiment, heure_formatée)
+        compartments_map = {}
 
         for item in self.items.all():
-            # Filtre les heures renseignées (TimeField ou string)
-            times = [t for t in [item.intake_time_1, item.intake_time_2, item.intake_time_3] if t]
-            
-            for t in times:
-                # Formatage HH:MM
-                if hasattr(t, 'strftime'):
-                    time_str = t.strftime("%H:%M")
-                else:
-                    time_str = str(t)[:5]
+            # Association directe (Heure, Compartiment)
+            schedule_pairs = [
+                (item.intake_time_1, item.compartment_1),
+                (item.intake_time_2, item.compartment_2),
+                (item.intake_time_3, item.compartment_3),
+            ]
 
-                if time_str not in time_to_compartment:
-                    time_to_compartment[time_str] = {
-                        # Récupère le compartiment choisi par le médecin pour ce médicament
-                        'compartment_number': item.compartment_number,
-                        'medications': []
-                    }
+            for time_val, comp_num in schedule_pairs:
+                if time_val and comp_num:
+                    time_str = time_val.strftime("%H:%M") if hasattr(time_val, 'strftime') else str(time_val)[:5]
+                    
+                    key = (comp_num, time_str)
+                    if key not in compartments_map:
+                        compartments_map[key] = []
+                    
+                    compartments_map[key].append({
+                        'medication_name': item.medication_name,
+                        'dosage': item.dosage,
+                        'item_notes': item.item_notes,
+                    })
 
-                # Ajout du médicament sans doublon
-                if item not in time_to_compartment[time_str]['medications']:
-                    time_to_compartment[time_str]['medications'].append(item)
+        # Tri par Numéro de Compartiment puis par Heure
+        sorted_keys = sorted(compartments_map.keys(), key=lambda x: (x[0], x[1]))
 
-        # Tri chronologique des heures de prise
-        sorted_times = sorted(time_to_compartment.keys())
-
-        compartments = []
-        for time_str in sorted_times:
-            data = time_to_compartment[time_str]
-            compartments.append({
-                'compartment_number': data['compartment_number'], # Fixé par le médecin
+        result = []
+        for comp_num, time_str in sorted_keys:
+            result.append({
+                'compartment_number': comp_num,
                 'time': time_str,
-                'medications': data['medications']
+                'medications': compartments_map[(comp_num, time_str)]
             })
 
-        return compartments
+        return result
 
 
 class PrescriptionItem(models.Model):
@@ -90,13 +88,19 @@ class PrescriptionItem(models.Model):
     start_date = models.DateField(null=True, blank=True, verbose_name="Date de début")
     end_date = models.DateField(null=True, blank=True, verbose_name="Date de fin")
     
-    intake_time_1 = models.TimeField(null=True, blank=True, verbose_name="Heure de prise 1")
-    intake_time_2 = models.TimeField(null=True, blank=True, verbose_name="Heure de prise 2")
-    intake_time_3 = models.TimeField(null=True, blank=True, verbose_name="Heure de prise 3")
+    # Prise 1 : Heure + Compartiment
+    intake_time_1 = models.TimeField(null=True, blank=True, verbose_name="Heure Prise 1")
+    compartment_1 = models.PositiveIntegerField(default=1, null=True, blank=True, verbose_name="Compartiment Prise 1")
     
-    # Le médecin choisit ce numéro lors de la création/modification de la prescription (ex: 1, 2, 3...)
-    compartment_number = models.PositiveIntegerField(default=1, verbose_name="Compartiment IoT")
-    item_notes = models.TextField(blank=True, null=True, verbose_name="Consignes spécifiques au médicament")
+    # Prise 2 : Heure + Compartiment
+    intake_time_2 = models.TimeField(null=True, blank=True, verbose_name="Heure Prise 2")
+    compartment_2 = models.PositiveIntegerField(default=2, null=True, blank=True, verbose_name="Compartiment Prise 2")
+    
+    # Prise 3 : Heure + Compartiment
+    intake_time_3 = models.TimeField(null=True, blank=True, verbose_name="Heure Prise 3")
+    compartment_3 = models.PositiveIntegerField(default=3, null=True, blank=True, verbose_name="Compartiment Prise 3")
+    
+    item_notes = models.TextField(blank=True, null=True, verbose_name="Consignes spécifiques")
 
     def __str__(self):
-        return f"{self.medication_name} ({self.dosage}) - Comp. N°{self.compartment_number}"
+        return f"{self.medication_name} ({self.dosage})"

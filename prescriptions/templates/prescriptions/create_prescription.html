@@ -25,10 +25,13 @@
                         {% csrf_token %}
                         {{ formset.management_form }}
 
-                        <!-- Remarques globales -->
+                        <!-- Instructions globales -->
                         <div class="mb-4">
                             <label class="form-label fw-bold">Instructions Générales de l'Ordonnance</label>
                             {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger small mt-1">{{ form.notes.errors|first }}</div>
+                            {% endif %}
                         </div>
 
                         <h5 class="text-primary border-bottom pb-2 mb-3">Médicaments Prescrits</h5>
@@ -37,6 +40,8 @@
                         <div id="items-container">
                             {% for item_form in formset %}
                                 <div class="item-row border rounded p-3 mb-4 bg-light">
+                                    {{ item_form.id }}
+                                    
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <h6 class="fw-bold text-secondary mb-0">
                                             Médicament #<span class="item-index">{{ forloop.counter }}</span>
@@ -46,54 +51,91 @@
                                         </button>
                                     </div>
 
+                                    {% if item_form.non_field_errors %}
+                                        <div class="alert alert-danger p-2 small">
+                                            {{ item_form.non_field_errors }}
+                                        </div>
+                                    {% endif %}
+
+                                    <!-- Nom & Posologie -->
                                     <div class="row">
                                         <div class="col-md-7 mb-3">
                                             <label class="form-label fw-bold small">Nom du médicament <span class="text-danger">*</span></label>
                                             {{ item_form.medication_name }}
+                                            {% if item_form.medication_name.errors %}
+                                                <div class="text-danger small mt-1">{{ item_form.medication_name.errors|first }}</div>
+                                            {% endif %}
                                         </div>
                                         <div class="col-md-5 mb-3">
                                             <label class="form-label fw-bold small">Dosage / Posologie</label>
                                             {{ item_form.dosage }}
+                                            {% if item_form.dosage.errors %}
+                                                <div class="text-danger small mt-1">{{ item_form.dosage.errors|first }}</div>
+                                            {% endif %}
                                         </div>
                                     </div>
 
+                                    <!-- Dates de traitement -->
                                     <div class="row">
-                                        <div class="col-md-4 mb-3">
+                                        <div class="col-md-6 mb-3">
                                             <label class="form-label fw-bold small">Date de début</label>
                                             {{ item_form.start_date }}
                                         </div>
-                                        <div class="col-md-4 mb-3">
+                                        <div class="col-md-6 mb-3">
                                             <label class="form-label fw-bold small">Date de fin</label>
                                             {{ item_form.end_date }}
                                         </div>
-                                        <div class="col-md-4 mb-3">
-                                            <label class="form-label fw-bold small">Compartiment IoT</label>
-                                            {{ item_form.compartment_number }}
-                                        </div>
                                     </div>
 
+                                    <!-- Programmation des Prises & Compartiments IoT rattachés -->
                                     <div class="p-3 mb-3 bg-white rounded border">
                                         <label class="form-label fw-bold small text-secondary mb-2">
-                                            <i class="bi bi-clock me-1"></i> Heures de prise
+                                            <i class="bi bi-clock me-1"></i> Heures de Prise & Association aux Compartiments IoT
                                         </label>
-                                        <div class="row">
-                                            <div class="col-md-4 mb-2">
-                                                <label class="form-label small text-muted">Prise 1</label>
+                                        
+                                        <!-- Prise 1 -->
+                                        <div class="row g-2 align-items-center mb-2">
+                                            <div class="col-md-2">
+                                                <span class="small fw-bold text-dark">Prise 1 :</span>
+                                            </div>
+                                            <div class="col-md-5">
                                                 {{ item_form.intake_time_1 }}
                                             </div>
-                                            <div class="col-md-4 mb-2">
-                                                <label class="form-label small text-muted">Prise 2</label>
+                                            <div class="col-md-5">
+                                                {{ item_form.compartment_1 }}
+                                            </div>
+                                        </div>
+
+                                        <!-- Prise 2 -->
+                                        <div class="row g-2 align-items-center mb-2">
+                                            <div class="col-md-2">
+                                                <span class="small fw-bold text-dark">Prise 2 :</span>
+                                            </div>
+                                            <div class="col-md-5">
                                                 {{ item_form.intake_time_2 }}
                                             </div>
-                                            <div class="col-md-4 mb-2">
-                                                <label class="form-label small text-muted">Prise 3</label>
+                                            <div class="col-md-5">
+                                                {{ item_form.compartment_2 }}
+                                            </div>
+                                        </div>
+
+                                        <!-- Prise 3 -->
+                                        <div class="row g-2 align-items-center">
+                                            <div class="col-md-2">
+                                                <span class="small fw-bold text-dark">Prise 3 :</span>
+                                            </div>
+                                            <div class="col-md-5">
                                                 {{ item_form.intake_time_3 }}
+                                            </div>
+                                            <div class="col-md-5">
+                                                {{ item_form.compartment_3 }}
                                             </div>
                                         </div>
                                     </div>
 
+                                    <!-- Consignes particulières -->
                                     <div class="mb-2">
-                                        <label class="form-label fw-bold small">Consignes spécifiques</label>
+                                        <label class="form-label fw-bold small">Consignes spécifiques au médicament</label>
                                         {{ item_form.item_notes }}
                                     </div>
 
@@ -125,43 +167,101 @@
     </div>
 </div>
 
+<!-- Template d'un formulaire vierge servant pour le clonage JS -->
+<template id="empty-form-template">
+    <div class="item-row border rounded p-3 mb-4 bg-light">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-secondary mb-0">
+                Médicament #<span class="item-index">__prefix__</span>
+            </h6>
+            <button type="button" class="btn btn-outline-danger btn-sm remove-item-btn">
+                <i class="bi bi-trash me-1"></i> Supprimer
+            </button>
+        </div>
+
+        <div class="row">
+            <div class="col-md-7 mb-3">
+                <label class="form-label fw-bold small">Nom du médicament <span class="text-danger">*</span></label>
+                {{ formset.empty_form.medication_name }}
+            </div>
+            <div class="col-md-5 mb-3">
+                <label class="form-label fw-bold small">Dosage / Posologie</label>
+                {{ formset.empty_form.dosage }}
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small">Date de début</label>
+                {{ formset.empty_form.start_date }}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold small">Date de fin</label>
+                {{ formset.empty_form.end_date }}
+            </div>
+        </div>
+
+        <div class="p-3 mb-3 bg-white rounded border">
+            <label class="form-label fw-bold small text-secondary mb-2">
+                <i class="bi bi-clock me-1"></i> Heures de Prise & Association aux Compartiments IoT
+            </label>
+            
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-md-2"><span class="small fw-bold text-dark">Prise 1 :</span></div>
+                <div class="col-md-5">{{ formset.empty_form.intake_time_1 }}</div>
+                <div class="col-md-5">{{ formset.empty_form.compartment_1 }}</div>
+            </div>
+
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-md-2"><span class="small fw-bold text-dark">Prise 2 :</span></div>
+                <div class="col-md-5">{{ formset.empty_form.intake_time_2 }}</div>
+                <div class="col-md-5">{{ formset.empty_form.compartment_2 }}</div>
+            </div>
+
+            <div class="row g-2 align-items-center">
+                <div class="col-md-2"><span class="small fw-bold text-dark">Prise 3 :</span></div>
+                <div class="col-md-5">{{ formset.empty_form.intake_time_3 }}</div>
+                <div class="col-md-5">{{ formset.empty_form.compartment_3 }}</div>
+            </div>
+        </div>
+
+        <div class="mb-2">
+            <label class="form-label fw-bold small">Consignes spécifiques au médicament</label>
+            {{ formset.empty_form.item_notes }}
+        </div>
+
+        <div class="d-none">{{ formset.empty_form.DELETE }}</div>
+    </div>
+</template>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('items-container');
     const addButton = document.getElementById('add-item-btn');
     const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+    const template = document.getElementById('empty-form-template');
 
     function updateIndexes() {
         const rows = container.querySelectorAll('.item-row');
         rows.forEach((row, index) => {
-            row.querySelector('.item-index').textContent = index + 1;
+            const indexSpan = row.querySelector('.item-index');
+            if (indexSpan) {
+                indexSpan.textContent = index + 1;
+            }
         });
     }
 
     addButton.addEventListener('click', function() {
-        const currentForms = container.querySelectorAll('.item-row');
-        const formCount = currentForms.length;
+        const formCount = parseInt(totalForms.value, 10);
+        
+        // Instanciation à partir du template vierge empty_form
+        let newFormHtml = template.innerHTML.replace(/__prefix__/g, formCount);
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = newFormHtml;
+        const newFormNode = tempDiv.firstElementChild;
 
-        const newForm = currentForms[0].cloneNode(true);
-        newForm.innerHTML = newForm.innerHTML.replace(/items-\d+-/g, `items-${formCount}-`);
-
-        // Réinitialisation des champs du nouveau formulaire cloné
-        newForm.querySelectorAll('input, textarea, select').forEach(input => {
-            if (input.type !== 'hidden' && input.type !== 'checkbox') {
-                if (input.tagName === 'SELECT') {
-                    input.selectedIndex = 0; // Remet au 1er choix (Compartiment IoT 1)
-                } else if (input.type === 'number') {
-                    input.value = formCount + 1;
-                } else {
-                    input.value = '';
-                }
-            }
-            if (input.type === 'checkbox') {
-                input.checked = false;
-            }
-        });
-
-        container.appendChild(newForm);
+        container.appendChild(newFormNode);
         totalForms.value = formCount + 1;
         updateIndexes();
     });

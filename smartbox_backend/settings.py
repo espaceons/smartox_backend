@@ -49,7 +49,9 @@ INSTALLED_APPS = [
     'prescriptions',
     'logs',
     'notifications',
-    'dashboards','iot',
+    'dashboards',
+    'iot_api',
+    'iot',
 ]
 
 

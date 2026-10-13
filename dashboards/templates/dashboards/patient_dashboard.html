@@ -289,12 +289,12 @@
                                                 <strong class="text-primary"><i class="bi bi-clock me-1"></i>{{ log.scheduled_datetime|date:"H:i" }}</strong>
                                             </td>
                                             <td>
-                                                <strong>{{ log.item.medication_name|default:log.prescription_item.medication_name }}</strong>
+                                                <strong>{{ log.compartment_number }}</strong>
                                             </td>
-                                            <td>{{ log.item.dosage|default:log.prescription_item.dosage|default:"-" }}</td>
+                                            <td>{{ log.taken_at|date:"d/m/Y à H:i" |default:"-" }}</td>
                                             <td>
                                                 <span class="badge bg-secondary">
-                                                    Compartiment {{ log.item.compartment_number|default:log.prescription_item.compartment_number|default:"1" }}
+                                                    Compartiment {{ log.compartment_number|default:"1" }}
                                                 </span>
                                             </td>
                                             <td>

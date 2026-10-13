@@ -23,7 +23,7 @@ urlpatterns = [
     path('', home, name='home'),
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
-    path('api/v1/device/update-status/', DeviceMedicationUpdateView.as_view(), name='device-update'),
+    path('api/iot/', include('iot_api.urls')),
     path('dashboard/', include('dashboards.urls')),
     path('prescriptions/', include('prescriptions.urls')),
 ]
