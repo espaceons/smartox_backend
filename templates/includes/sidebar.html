@@ -42,6 +42,30 @@
             </a>
         </li>
 
+        <!-- ESPACE ADMINISTRATION (Visible uniquement pour Admin / Superadmin) -->
+        {% if request.user.is_staff or request.user.is_superuser %}
+        <li class="nav-item mt-3">
+            <small class="text-uppercase text-white fw-bold px-2" style="font-size: 0.65rem; letter-spacing: 0.5px;">Administration</small>
+        </li>
+        <li>
+            <a href="/admin/" target="_blank" class="nav-link text-white d-flex align-items-center gap-2">
+                <i class="bi bi-shield-lock-fill text-danger"></i>
+                <span>Espace Admin Django</span>
+            </a>
+        </li>
+        <li>
+            <a href="/admin/iot_api/doselog/" target="_blank" class="nav-link text-white d-flex align-items-center gap-2">
+                <i class="bi bi-cpu text-warning"></i>
+                <span>Logs IoT (Admin)</span>
+            </a>
+        </li>
+        {% endif %}
+
+        <!-- ESPACES MÉTIERS -->
+        <li class="nav-item mt-3">
+            <small class="text-uppercase text-muted fw-bold px-2" style="font-size: 0.65rem; letter-spacing: 0.5px;">Espaces Métiers</small>
+        </li>
+
         <!-- Menu Patient -->
         {% if request.user.role == 'PATIENT' or request.user.is_staff or request.user.is_superuser %}
         <li class="nav-item">
@@ -60,6 +84,13 @@
                class="nav-link text-white d-flex align-items-center gap-2 {% if request.resolver_match.url_name == 'doctor-dashboard' %}active bg-primary{% endif %}">
                 <i class="bi bi-heart-pulse-fill"></i>
                 <span>Espace Médecin</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{% url 'prescriptions:prescription-list' %}" 
+               class="nav-link text-white d-flex align-items-center gap-2 ps-4 {% if request.resolver_match.url_name == 'prescription-list' %}active bg-primary{% endif %}" style="font-size: 0.9rem;">
+                <i class="bi bi-journal-medical text-info"></i>
+                <span>Liste des Ordonnances</span>
             </a>
         </li>
         {% endif %}
@@ -90,7 +121,7 @@
 
     <hr class="border-secondary my-3">
 
-    <!-- Bouton de Déconnexion (POST avec CSRF Token) -->
+    <!-- Bouton de Déconnexion -->
     <div>
         <form action="{% url 'accounts:logout' %}" method="post" class="w-100">
             {% csrf_token %}

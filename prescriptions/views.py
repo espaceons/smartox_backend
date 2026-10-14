@@ -76,7 +76,7 @@ from .forms import PrescriptionForm, PrescriptionItemFormSet
 
 User = get_user_model()
 
-# listes des prescriptions
+# listes des prescriptions pour les patients
 @login_required
 def list_patient_prescriptions(request, patient_id):
     """
@@ -114,6 +114,50 @@ def list_patient_prescriptions(request, patient_id):
         'patient': patient,
         'prescriptions': prescriptions
     })
+
+# lises des prescriptions pour les médecins avec filtre par patient
+
+
+@login_required
+def prescription_list(request):
+    """
+    Vue permettant à un médecin (ou un admin) de consulter toutes ses prescriptions
+    avec possibilité de filtrer par patient.
+    """
+    user = request.user
+
+    # Vérification des autorisations (Médecin ou Staff)
+    is_doctor = getattr(user, "is_doctor", False)
+    if callable(is_doctor):
+        is_doctor = is_doctor()
+
+    if not (is_doctor or user.is_staff or user.is_superuser):
+        raise PermissionDenied("Accès réservé aux médecins.")
+
+    # Récupération des patients associés au médecin pour alimenter le filtre
+    active_links = DoctorPatientLink.objects.filter(
+        doctor=user,
+        status=DoctorPatientLink.Status.ACCEPTED
+    ).select_related("patient")
+
+    patients = [link.patient for link in active_links]
+
+    # Requête de base pour les prescriptions du médecin connecté
+    prescriptions = Prescription.objects.filter(doctor=user).select_related(
+        'patient').prefetch_related('items').order_by('-created_at')
+
+    # Application du filtre par patient si sélectionné dans l'URL (GET)
+    selected_patient_id = request.GET.get('patient_id')
+    if selected_patient_id:
+        prescriptions = prescriptions.filter(patient_id=selected_patient_id)
+
+    context = {
+        'prescriptions': prescriptions,
+        'patients': patients,
+        'selected_patient_id': selected_patient_id,
+    }
+    return render(request, 'prescriptions/prescription_list_medecin.html', context)
+
 
 
 # --- VUE DE MODIFICATION ---
